@@ -64,11 +64,10 @@
     <form method="dialog" id="onboarding-form">
       <h2>Before we begin</h2>
       <p>
-  Life is short. We’re here for a moment — a vapor — and then we’re gone.
-  <br><br>
-  <strong>Memento mori</strong> is the practice of remembering our mortality so we live with urgency and purpose.
-  This app is a gentle, constant reminder that each moment is precious. Let’s personalize it to your life.
-</p>
+        Life is short. We’re here for a moment — a vapor — and then we’re gone.
+        <br><br>
+        <strong>Memento mori</strong> is the practice of remembering our mortality so we live with urgency and purpose.
+        This app is a gentle, constant reminder that each moment is precious. Let’s personalize it to your life.
       </p>
 
       <label> Your Birthdate
@@ -151,29 +150,34 @@
     <form method="dialog" id="loved-one-form" novalidate>
       <h3 id="loved-one-title">Add Loved One</h3>
       <input type="hidden" id="loved-one-index">
+
       <label> Name
         <input type="text" id="lo-name" maxlength="32" required>
       </label>
+
       <label> Birthdate
         <input type="date" id="lo-birthdate" required>
       </label>
+
       <label> Photo (optional)
         <input type="file" id="lo-photo" accept="image/*">
-        <label class="lo-child-row">
-  <input type="checkbox" id="lo-is-child">
-  This loved one is a child
-</label>
-
-<fieldset id="lo-child-options" class="lo-child-options" disabled>
-  <legend>Child countdown mode</legend>
-  <label><input type="radio" name="lo-child-mode" value="18" id="lo-child-18" checked> Until 18th birthday</label>
-  <label><input type="radio" name="lo-child-mode" value="full" id="lo-child-full"> Full life</label>
-  <p class="help">
-    “Until 18” shows the days remaining until their 18th birthday; “Full life” uses your default lifespan.
-  </p>
-</fieldset>
-
       </label>
+
+      <!-- Child options (separate from the Photo label to avoid invalid nesting) -->
+      <label class="lo-child-row">
+        <input type="checkbox" id="lo-is-child">
+        This loved one is a child
+      </label>
+
+      <fieldset id="lo-child-options" class="lo-child-options" disabled>
+        <legend>Child countdown mode</legend>
+        <label><input type="radio" name="lo-child-mode" value="18" id="lo-child-18" checked> Until 18th birthday</label>
+        <label><input type="radio" name="lo-child-mode" value="full" id="lo-child-full"> Full life</label>
+        <p class="help">
+          “Until 18” shows the days remaining until their 18th birthday; “Full life” uses your default lifespan.
+        </p>
+      </fieldset>
+
       <menu>
         <button type="submit" formnovalidate value="cancel">Cancel</button>
         <button id="save-loved-one" value="default">Save</button>
