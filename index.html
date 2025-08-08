@@ -4,53 +4,100 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Live Transformed Countdown</title>
+
+  <!-- PWA meta -->
   <meta name="theme-color" content="#111111">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json">
+
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- Background overlay (for user-uploaded images / daily random color) -->
   <div id="bg-overlay" class="bg-overlay"></div>
+
+  <!-- Watermark -->
   <div class="background-text">Live<br>Transformed</div>
 
+  <!-- Top bar -->
   <header class="top-bar">
     <button id="open-settings" aria-label="Open settings">⚙️</button>
     <span id="local-time" aria-live="polite">--:--:--</span>
   </header>
 
-  <main>
+  <!-- Main app UI (hidden until onboarding completes) -->
+  <main id="app-main">
     <section class="center-stack" id="center">
       <div id="countdown" class="countdown">
-        <div id="cd-days" class="time-part">0 days</div>
-        <div id="cd-time" class="time-part">00:00:00</div>
+        <!-- Line 1: Days -->
+        <div id="cd-days" class="time-part">—</div>
+
+        <!-- Line 2: HH:MM:SS (24-hour) -->
+        <div id="cd-time" class="time-part" aria-label="Time remaining today">
+          <span id="cd-hh">00</span>:<span id="cd-mm">00</span>:<span id="cd-ss">00</span>
+        </div>
       </div>
 
+      <!-- Quote (tap/click to skip to next) -->
       <blockquote id="quote" aria-live="polite" title="Tap to skip">&#8220;Quote will appear here.&#8221;</blockquote>
-      <p id="percentage-lived">0% lived</p>
+
+      <!-- Percentage lived -->
+      <p id="percentage-lived"> </p>
     </section>
 
+    <!-- Loved Ones (bottom-left) -->
     <section id="loved-ones" class="loved-ones">
       <ul id="loved-ones-list"></ul>
       <button id="add-loved-one" type="button">+ Add Loved One</button>
     </section>
 
+    <!-- Slogan (bottom-right) -->
     <section id="slogan-section" class="slogan">
-      <span id="slogan-display">live like it matters</span>
+      <span id="slogan-display"></span>
     </section>
   </main>
+
+  <!-- Onboarding (first run) -->
+  <dialog id="onboarding">
+    <form method="dialog" id="onboarding-form">
+      <h2>Before we begin</h2>
+      <p>
+        Time is fleeting. This app helps you stay motivated and present—one day at a time.
+        Enter your info to personalize your countdown and daily focus.
+      </p>
+
+      <label> Your Birthdate
+        <input type="date" id="ob-birthdate" required>
+      </label>
+
+      <label> Lifespan (years)
+        <input type="number" id="ob-lifespan" min="1" max="130" required>
+      </label>
+
+      <label> Life Slogan (optional)
+        <input type="text" id="ob-slogan" maxlength="80" placeholder="e.g., Live like it matters">
+      </label>
+
+      <menu>
+        <button value="cancel">Cancel</button>
+        <button id="ob-start" value="start">Start</button>
+      </menu>
+    </form>
+  </dialog>
 
   <!-- Settings Modal -->
   <dialog id="settings-dialog">
     <form method="dialog" id="settings-form">
       <h2>Settings</h2>
+
       <label> Your Birthdate
         <input type="date" id="user-birthdate">
       </label>
 
       <label> Lifespan (years)
-        <input type="number" id="lifespan" min="1" max="130" value="80">
+        <input type="number" id="lifespan" min="1" max="130">
       </label>
 
       <label> Life Slogan
@@ -117,6 +164,7 @@
     </form>
   </dialog>
 
+  <!-- Scripts -->
   <script src="quotes.js"></script>
   <script src="idb.min.js"></script>
   <script src="app.js" defer></script>
