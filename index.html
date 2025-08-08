@@ -159,6 +159,20 @@
       </label>
       <label> Photo (optional)
         <input type="file" id="lo-photo" accept="image/*">
+        <label class="lo-child-row">
+  <input type="checkbox" id="lo-is-child">
+  This loved one is a child
+</label>
+
+<fieldset id="lo-child-options" class="lo-child-options" disabled>
+  <legend>Child countdown mode</legend>
+  <label><input type="radio" name="lo-child-mode" value="18" id="lo-child-18" checked> Until 18th birthday</label>
+  <label><input type="radio" name="lo-child-mode" value="full" id="lo-child-full"> Full life</label>
+  <p class="help">
+    “Until 18” shows the days remaining until their 18th birthday; “Full life” uses your default lifespan.
+  </p>
+</fieldset>
+
       </label>
       <menu>
         <button type="submit" formnovalidate value="cancel">Cancel</button>
