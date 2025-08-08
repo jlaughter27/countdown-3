@@ -152,6 +152,10 @@ blockquote{
 #add-loved-one{
   background:transparent; color:#bbb; border:1px dashed #444; border-radius:.5rem; padding:.25rem .5rem; cursor:pointer;
 }
+.lo-child-row { display:flex; align-items:center; gap:.5rem; }
+.lo-child-options { border:1px solid #333; border-radius:.5rem; padding:.5rem .7rem; }
+.lo-child-options:disabled { opacity:.6; }
+.lo-badge { font-size:.8rem; opacity:.8; border:1px solid #444; padding:.05rem .35rem; border-radius:.35rem; margin-left:.4rem; }
 
 /* Slogan bottom-right */
 .slogan{
