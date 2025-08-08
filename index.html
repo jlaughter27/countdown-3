@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Live Transformed Countdown</title>
+  <meta name="theme-color" content="#111111">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="bg-overlay" class="bg-overlay"></div>
+  <div class="background-text">Live<br>Transformed</div>
+
+  <header class="top-bar">
+    <button id="open-settings" aria-label="Open settings">⚙️</button>
+    <span id="local-time" aria-live="polite">--:--:--</span>
+  </header>
+
+  <main>
+    <section class="center-stack" id="center">
+      <div id="countdown" class="countdown">
+        <div id="cd-days" class="time-part">0 days</div>
+        <div id="cd-time" class="time-part">00:00:00</div>
+      </div>
+
+      <blockquote id="quote" aria-live="polite" title="Tap to skip">&#8220;Quote will appear here.&#8221;</blockquote>
+      <p id="percentage-lived">0% lived</p>
+    </section>
+
+    <section id="loved-ones" class="loved-ones">
+      <ul id="loved-ones-list"></ul>
+      <button id="add-loved-one" type="button">+ Add Loved One</button>
+    </section>
+
+    <section id="slogan-section" class="slogan">
+      <span id="slogan-display">live like it matters</span>
+    </section>
+  </main>
+
+  <!-- Settings Modal -->
+  <dialog id="settings-dialog">
+    <form method="dialog" id="settings-form">
+      <h2>Settings</h2>
+      <label> Your Birthdate
+        <input type="date" id="user-birthdate">
+      </label>
+
+      <label> Lifespan (years)
+        <input type="number" id="lifespan" min="1" max="130" value="80">
+      </label>
+
+      <label> Life Slogan
+        <input type="text" id="slogan-input" maxlength="80" placeholder="Enter your slogan">
+      </label>
+
+      <label> Quote Interval (seconds)
+        <input type="number" id="quote-interval" min="10" max="600" value="30">
+      </label>
+
+      <fieldset>
+        <legend>Quote Category</legend>
+        <label><input type="radio" name="quote-cat" value="bible" id="cat-bible"> Bible</label>
+        <label><input type="radio" name="quote-cat" value="motivational" id="cat-motivational"> Motivational</label>
+        <label><input type="radio" name="quote-cat" value="theologians" id="cat-theologians"> Theologians</label>
+        <label><input type="radio" name="quote-cat" value="mixed" id="cat-mixed" checked> Mixed</label>
+      </fieldset>
+
+      <label class="toggle">
+        <input type="checkbox" id="tts-enabled">
+        Text-to-Speech for quotes
+      </label>
+
+      <fieldset>
+        <legend>Background</legend>
+        <label><input type="radio" name="bg-mode" value="random" id="bg-random" checked> Daily random color</label>
+        <label><input type="radio" name="bg-mode" value="solid" id="bg-solid"> Solid color</label>
+        <input type="color" id="bg-color" value="#111111">
+        <label><input type="radio" name="bg-mode" value="images" id="bg-images"> Rotate uploaded images</label>
+        <input type="file" id="bg-upload" accept="image/*" multiple>
+      </fieldset>
+
+      <fieldset>
+        <legend>Backup & Restore</legend>
+        <button type="button" id="export-settings">Export Settings</button>
+        <label class="import-label">Import <input type="file" id="import-settings" accept="application/json"></label>
+      </fieldset>
+
+      <menu>
+        <button type="submit" formnovalidate value="cancel">Cancel</button>
+        <button id="save-settings" value="default" type="button">Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- Loved One Editor Modal -->
+  <dialog id="loved-one-dialog">
+    <form method="dialog" id="loved-one-form" novalidate>
+      <h3 id="loved-one-title">Add Loved One</h3>
+      <input type="hidden" id="loved-one-index">
+      <label> Name
+        <input type="text" id="lo-name" maxlength="32" required>
+      </label>
+      <label> Birthdate
+        <input type="date" id="lo-birthdate" required>
+      </label>
+      <label> Photo (optional)
+        <input type="file" id="lo-photo" accept="image/*">
+      </label>
+      <menu>
+        <button type="submit" formnovalidate value="cancel">Cancel</button>
+        <button id="save-loved-one" value="default">Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script src="quotes.js"></script>
+  <script src="idb.min.js"></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
