@@ -1,8 +1,9 @@
-const CACHE_NAME = "ltc-cache-v5";
+const CACHE_NAME = "ltc-cache-v6";
 const CORE_ASSETS = [
   "./",
   "./index.html",
   "./style.css",
+  "./lib.js",
   "./app.js",
   "./quotes.js",
   "./idb.min.js",

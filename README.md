@@ -30,10 +30,23 @@ It's a static site with no build step. Serve the folder over HTTP (a service
 worker and `dialog`/manifest features need a real origin, not `file://`):
 
 ```bash
-# any static server works, for example:
-python3 -m http.server 8000
+npm start          # python3 -m http.server 8000
 # then open http://localhost:8000
 ```
+
+## Development & testing
+
+The core logic (date math, countdown, quote deck) lives in `lib.js` as pure,
+side-effect-free functions so it can be unit-tested without a browser. A
+zero-dependency test runner covers it:
+
+```bash
+npm test           # node tools/test.mjs
+```
+
+CI (`.github/workflows/ci.yml`) runs the tests, validates the JSON, syntax-checks
+every script, and confirms the icon generator emits valid PNGs on every push and
+pull request.
 
 ## Project structure
 
@@ -41,13 +54,15 @@ python3 -m http.server 8000
 | --- | --- |
 | `index.html` | Markup: countdown, dialogs (onboarding, settings, loved ones). |
 | `style.css` | All styling (dark theme, responsive, reduced-motion aware). |
-| `app.js` | App logic: countdown, quotes, loved ones, backgrounds, storage. |
-| `quotes.js` | Quote pools and `getQuotePool(category)`. |
+| `app.js` | DOM wiring: countdown, quotes, loved ones, backgrounds, storage. |
+| `lib.js` | Pure, unit-tested logic (date math, countdown, quote deck). |
+| `quotes.js` | Curated quote pools and `getQuotePool(category)`. |
 | `idb.min.js` | Tiny IndexedDB key/value helper (`get`/`set`/`keys`/`del`). |
 | `service-worker.js` | Offline caching (resilient install, SWR, offline fallback). |
 | `manifest.json` | PWA manifest (name, icons, theme). |
 | `icons/` | App icons (`any` + `maskable`, 192 & 512). |
-| `tools/gen-icons.mjs` | Regenerates the icons from code (`node tools/gen-icons.mjs`). |
+| `tools/gen-icons.mjs` | Regenerates the icons from code (`npm run icons`). |
+| `tools/test.mjs` | Zero-dependency unit test runner (`npm test`). |
 
 ## Regenerating icons
 

@@ -1,0 +1,12 @@
+{
+  "name": "live-transformed-countdown",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A memento mori countdown PWA — a gentle reminder that each moment is precious.",
+  "scripts": {
+    "test": "node tools/test.mjs",
+    "icons": "node tools/gen-icons.mjs",
+    "start": "python3 -m http.server 8000"
+  },
+  "license": "MIT"
+}
