@@ -100,33 +100,41 @@
   }
 
   // —— Backgrounds (random/solid/images) ————————————————
+  let bgObjectUrl = null;
+  function clearBgImage(){
+    if (bgObjectUrl){ URL.revokeObjectURL(bgObjectUrl); bgObjectUrl = null; }
+    if (bgOverlay) bgOverlay.style.backgroundImage = 'none';
+  }
   async function setBackground(){
     const mode = load(KEYS.bgMode, 'random');
     if (mode === 'solid'){
-      const color = load(KEYS.bgColor, '#111111');
-      document.body.style.backgroundColor = color;
-      if (bgOverlay) bgOverlay.style.backgroundImage = 'none';
+      clearBgImage();
+      document.body.style.backgroundColor = load(KEYS.bgColor, '#111111');
       return;
     }
     if (mode === 'images' && window.ltcIDB){
-      const keys = await window.ltcIDB.keys();
+      // Only consider background uploads — keys are namespaced "bg-" so we
+      // never accidentally show a loved one's photo (key "lo-") as wallpaper.
+      const allKeys = await window.ltcIDB.keys();
+      const keys = allKeys.filter(k => typeof k === 'string' && k.startsWith('bg-'));
       if (keys.length){
         const dayIndex = Math.floor(Date.now()/(1000*60*60*24)) % keys.length;
         const blob = await window.ltcIDB.get(keys[dayIndex]);
         if (blob && bgOverlay){
-          const url = URL.createObjectURL(blob);
-          bgOverlay.style.backgroundImage = `url(${url})`;
+          clearBgImage();
+          bgObjectUrl = URL.createObjectURL(blob);
+          bgOverlay.style.backgroundImage = `url(${bgObjectUrl})`;
           document.body.style.backgroundColor = '#000';
           return;
         }
       }
     }
     // Daily random color via seeded HSL
+    clearBgImage();
     const seed = Math.floor(Date.now()/(1000*60*60*24));
     const rng  = mulberry32(seed);
     const hue  = Math.floor(rng()*360);
     document.body.style.backgroundColor = `hsl(${hue} 20% 10%)`;
-    if (bgOverlay) bgOverlay.style.backgroundImage = 'none';
   }
 
   // —— Countdown ————————————————————————————————————————
@@ -236,8 +244,12 @@
     return Math.max(0, Math.ceil(diff / (1000*60*60*24)));
   }
 
+  let loAvatarUrls = [];
   function renderLovedOnes(){
     if (!elLovedList) return;
+    // Release object URLs from the previous render to avoid leaking memory.
+    loAvatarUrls.forEach(URL.revokeObjectURL);
+    loAvatarUrls = [];
     elLovedList.innerHTML = "";
     const timers = new Map();
 
@@ -246,9 +258,11 @@
 
       const img = document.createElement('img');
       img.className = 'lo-avatar';
-      img.alt = '';
+      img.alt = lo.name ? `${lo.name}'s photo` : '';
       if (lo.photoKey && window.ltcIDB) {
-        window.ltcIDB.get(lo.photoKey).then(blob => { if (blob) img.src = URL.createObjectURL(blob); });
+        window.ltcIDB.get(lo.photoKey).then(blob => {
+          if (blob){ const url = URL.createObjectURL(blob); loAvatarUrls.push(url); img.src = url; }
+        });
       }
 
       const meta = document.createElement('div');
@@ -271,7 +285,12 @@
       const edit = document.createElement('button'); edit.textContent = 'Edit';
       edit.addEventListener('click', (evt) => { evt.stopPropagation(); openLovedOneEditor(i); });
       const del  = document.createElement('button'); del.textContent  = 'Remove';
-      del.addEventListener('click', (evt) => { evt.stopPropagation(); lovedOnes.splice(i,1); saveLovedOnes(); });
+      del.addEventListener('click', (evt) => {
+        evt.stopPropagation();
+        const [removed] = lovedOnes.splice(i,1);
+        if (removed && removed.photoKey && window.ltcIDB) window.ltcIDB.del(removed.photoKey).catch(()=>{});
+        saveLovedOnes();
+      });
       actions.append(edit, del);
 
       // Show actions for 5s when name is clicked
@@ -356,6 +375,8 @@
         lovedOnes.push(newObj);
       } else {
         const prev = lovedOnes[idx];
+        // A newly uploaded photo replaces the old blob — delete the stale one.
+        if (photoKey && prev.photoKey && window.ltcIDB) window.ltcIDB.del(prev.photoKey).catch(()=>{});
         lovedOnes[idx] = { ...prev, ...newObj, photoKey: photoKey || prev.photoKey };
       }
       saveLovedOnes();
@@ -432,6 +453,16 @@
   if (bgUpload && window.ltcIDB) {
     bgUpload.addEventListener('change', async (e) => {
       const files = Array.from(e.target.files || []).slice(0,5);
+      if (!files.length) return;
+
+      // Remove previously uploaded backgrounds so old blobs don't pile up.
+      const existing = await window.ltcIDB.keys();
+      await Promise.all(
+        existing
+          .filter(k => typeof k === 'string' && k.startsWith('bg-'))
+          .map(k => window.ltcIDB.del(k))
+      );
+
       const keys = [];
       for (const f of files){
         const key = `bg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -439,6 +470,7 @@
         keys.push(key);
       }
       save(KEYS.bgKeys, keys);
+      if (load(KEYS.bgMode, 'random') === 'images') await setBackground();
     });
   }
 
@@ -452,7 +484,7 @@
       const a = document.createElement('a');
       a.href = url; a.download = 'ltc-settings.json';
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
   }
   if (importInput) {
@@ -488,7 +520,7 @@
       startQuoteRotation();
     } else {
       if (appMain) appMain.hidden = true;
-      if (obDlg && typeof obDlg.showModal === 'function') obDlg.showModal();
+      if (obDlg && typeof obDlg.showModal === 'function' && !obDlg.open) obDlg.showModal();
     }
   }
 
@@ -503,6 +535,11 @@
         save(KEYS.onboarded, true);
       }
     });
+  }
+  // When onboarding closes, reveal the app if it's complete — otherwise the
+  // user is stuck on a blank screen (after finishing, or if they cancel/ESC).
+  if (obDlg) {
+    obDlg.addEventListener('close', () => { startAppIfReady(); });
   }
 
   // —— Init ———————————————————————————————————————————————
