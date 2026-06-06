@@ -5,8 +5,12 @@
   "description": "A memento mori countdown PWA — a gentle reminder that each moment is precious.",
   "scripts": {
     "test": "node tools/test.mjs",
+    "test:e2e": "playwright test",
     "icons": "node tools/gen-icons.mjs",
     "start": "python3 -m http.server 8000"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
 }
