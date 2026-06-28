@@ -13,6 +13,7 @@
     bgMode: 'ltc.bgMode',
     bgColor: 'ltc.bgColor',
     bgKeys: 'ltc.bgKeys',
+    view: 'ltc.view',
     onboarded: 'ltc.onboarded'
   };
 
@@ -22,6 +23,13 @@
   const elMM         = document.getElementById('cd-mm');
   const elSS         = document.getElementById('cd-ss');
   const elPercent    = document.getElementById('percentage-lived');
+  const elHumanUnits = document.getElementById('human-units');
+  const elClockView  = document.getElementById('clock-view');
+  const elWeeksView  = document.getElementById('weeks-view');
+  const elWeeksGrid  = document.getElementById('weeks-grid');
+  const elWeeksCap   = document.getElementById('weeks-caption');
+  const viewClockBtn = document.getElementById('view-clock');
+  const viewWeeksBtn = document.getElementById('view-weeks');
   const elQuote      = document.getElementById('quote');
   const elLocalTime  = document.getElementById('local-time');
   const elSloganDisp = document.getElementById('slogan-display');
@@ -73,10 +81,10 @@
   const obSlogan = document.getElementById('ob-slogan');
 
   // —— State ——————————————————————————————————————————————
+  const L = window.LTCLib || {};
   let lovedOnes  = load(KEYS.lovedOnes, []);
-  let quoteIdx   = 0;
+  let quoteDeck  = null;
   let quoteTimer = null;
-  let activePool = null;
   let last       = { days: null, hh: null, mm: null, ss: null }; // for pulses
 
   // —— Utils ——————————————————————————————————————————————
@@ -86,7 +94,6 @@
   }
   function save(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
   function two(n) { return String(n).padStart(2, '0'); }
-  function addYears(date, years) { const d = new Date(date); d.setFullYear(d.getFullYear() + years); return d; }
   function mulberry32(a){return function(){var t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
   function pulse(el){ if (!el) return; el.classList.remove('pulse-soft'); void el.offsetWidth; el.classList.add('pulse-soft'); }
 
@@ -100,84 +107,140 @@
   }
 
   // —— Backgrounds (random/solid/images) ————————————————
+  let bgObjectUrl = null;
+  function clearBgImage(){
+    if (bgObjectUrl){ URL.revokeObjectURL(bgObjectUrl); bgObjectUrl = null; }
+    if (bgOverlay) bgOverlay.style.backgroundImage = 'none';
+  }
   async function setBackground(){
     const mode = load(KEYS.bgMode, 'random');
     if (mode === 'solid'){
-      const color = load(KEYS.bgColor, '#111111');
-      document.body.style.backgroundColor = color;
-      if (bgOverlay) bgOverlay.style.backgroundImage = 'none';
+      clearBgImage();
+      document.body.style.backgroundColor = load(KEYS.bgColor, '#111111');
       return;
     }
     if (mode === 'images' && window.ltcIDB){
-      const keys = await window.ltcIDB.keys();
+      // Only consider background uploads — keys are namespaced "bg-" so we
+      // never accidentally show a loved one's photo (key "lo-") as wallpaper.
+      const allKeys = await window.ltcIDB.keys();
+      const keys = allKeys.filter(k => typeof k === 'string' && k.startsWith('bg-'));
       if (keys.length){
         const dayIndex = Math.floor(Date.now()/(1000*60*60*24)) % keys.length;
         const blob = await window.ltcIDB.get(keys[dayIndex]);
         if (blob && bgOverlay){
-          const url = URL.createObjectURL(blob);
-          bgOverlay.style.backgroundImage = `url(${url})`;
+          clearBgImage();
+          bgObjectUrl = URL.createObjectURL(blob);
+          bgOverlay.style.backgroundImage = `url(${bgObjectUrl})`;
           document.body.style.backgroundColor = '#000';
           return;
         }
       }
     }
     // Daily random color via seeded HSL
+    clearBgImage();
     const seed = Math.floor(Date.now()/(1000*60*60*24));
     const rng  = mulberry32(seed);
     const hue  = Math.floor(rng()*360);
     document.body.style.backgroundColor = `hsl(${hue} 20% 10%)`;
-    if (bgOverlay) bgOverlay.style.backgroundImage = 'none';
   }
 
   // —— Countdown ————————————————————————————————————————
   function updateCountdown(){
     if (!elDays || !elHH || !elMM || !elSS || !elPercent) return;
 
-    const birth = load(KEYS.birthdate, null);
-    const lifespan = load(KEYS.lifespan, null);
-    if (!birth || !lifespan){
+    const c = L.computeCountdown(load(KEYS.birthdate, null), load(KEYS.lifespan, null));
+    if (!c){
       elDays.textContent = '—';
       elHH.textContent = '00';
       elMM.textContent = '00';
       elSS.textContent = '00';
       elPercent.textContent = '';
+      if (elHumanUnits) elHumanUnits.textContent = '';
       return;
     }
 
-    const start = new Date(birth);
-    const end   = addYears(start, Number(lifespan));
-    const now   = new Date();
-    const remaining = Math.max(0, end - now);
-
-    const totalSec = Math.floor(remaining / 1000);
-    const days = Math.floor(totalSec / 86400);
-    const rem  = totalSec % 86400;
-    const hh   = Math.floor(rem / 3600);
-    const mm   = Math.floor((rem % 3600) / 60);
-    const ss   = rem % 60;
-
-    // Update text
-    elDays.textContent = `${days} days`;
+    const { days, hh, mm, ss, pct, ended } = c;
+    elDays.textContent = `${days.toLocaleString()} ${days === 1 ? 'day' : 'days'}`;
     elHH.textContent   = two(hh);
     elMM.textContent   = two(mm);
     elSS.textContent   = two(ss);
 
-    // Subtle, targeted pulse
+    // Subtle, targeted pulse on the parts that actually changed.
     if (last.ss !== ss) pulse(elSS);
     if (last.mm !== mm) { pulse(elMM); pulse(elSS); }
     if (last.hh !== hh) { pulse(elHH); pulse(elMM); pulse(elSS); }
     if (last.days !== days) { pulse(elDays); pulse(elHH); pulse(elMM); pulse(elSS); }
-
     last = { days, hh, mm, ss };
 
-    // % lived
-    const total = end - start;
-    const elapsed = Math.max(0, now - start);
-    const pct = total ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0;
-    elPercent.textContent = `${pct.toFixed(1)}% lived`;
+    elPercent.textContent = ended ? '100% lived — every day is a gift' : `${pct.toFixed(1)}% lived`;
+
+    if (elHumanUnits){
+      const u = L.lifeUnits && L.lifeUnits(load(KEYS.birthdate, null), load(KEYS.lifespan, null));
+      elHumanUnits.textContent = u
+        ? (u.weeksLeft > 0 ? `≈ ${u.weeksLeft.toLocaleString()} Saturdays left` : 'Make today count')
+        : '';
+    }
   }
-  setInterval(updateCountdown, 1000);
+  let countdownTimer = setInterval(updateCountdown, 1000);
   updateCountdown();
+
+  // —— Life in weeks ————————————————————————————————————
+  const accentColor = (getComputedStyle(document.documentElement)
+    .getPropertyValue('--accent') || '#7FFF7F').trim() || '#7FFF7F';
+
+  function renderWeeksGrid(){
+    if (!elWeeksGrid || elWeeksView.hidden) return;
+    const u = L.lifeUnits && L.lifeUnits(load(KEYS.birthdate, null), load(KEYS.lifespan, null));
+    const ctx = elWeeksGrid.getContext('2d');
+    if (!u || !ctx){ if (elWeeksCap) elWeeksCap.textContent = ''; return; }
+
+    const cols = u.columns;
+    const rows = Math.ceil(u.weeksTotal / cols);
+    const cssW = elWeeksGrid.clientWidth || (elWeeksView.clientWidth || 320);
+    const unit = cssW / cols;            // one cell + its gap
+    const cell = Math.max(2, unit * 0.78);
+    const cssH = rows * unit;
+    const dpr = window.devicePixelRatio || 1;
+
+    elWeeksGrid.width = Math.round(cssW * dpr);
+    elWeeksGrid.height = Math.round(cssH * dpr);
+    elWeeksGrid.style.height = cssH + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    for (let i = 0; i < u.weeksTotal; i++){
+      const x = (i % cols) * unit;
+      const y = Math.floor(i / cols) * unit;
+      if (i < u.weeksLived)      ctx.fillStyle = 'rgba(255,255,255,0.82)'; // lived
+      else if (i === u.weeksLived) ctx.fillStyle = accentColor;            // this week
+      else                       ctx.fillStyle = 'rgba(255,255,255,0.12)'; // ahead
+      ctx.fillRect(x, y, cell, cell);
+    }
+
+    const lived = u.weeksLived.toLocaleString();
+    const total = u.weeksTotal.toLocaleString();
+    elWeeksGrid.setAttribute('aria-label', `Life in weeks: ${lived} of ${total} weeks lived`);
+    if (elWeeksCap) elWeeksCap.textContent = `${lived} weeks lived · ${u.weeksLeft.toLocaleString()} remaining`;
+  }
+
+  function setView(view){
+    const weeks = view === 'weeks';
+    if (elClockView) elClockView.hidden = weeks;
+    if (elWeeksView) elWeeksView.hidden = !weeks;
+    if (viewClockBtn){ viewClockBtn.classList.toggle('active', !weeks); viewClockBtn.setAttribute('aria-selected', String(!weeks)); }
+    if (viewWeeksBtn){ viewWeeksBtn.classList.toggle('active', weeks);  viewWeeksBtn.setAttribute('aria-selected', String(weeks)); }
+    save(KEYS.view, view);
+    if (weeks) renderWeeksGrid();
+  }
+  if (viewClockBtn) viewClockBtn.addEventListener('click', () => setView('clock'));
+  if (viewWeeksBtn) viewWeeksBtn.addEventListener('click', () => setView('weeks'));
+
+  // Redraw the grid (only when visible) on resize, coalesced to a frame.
+  let resizeRAF = null;
+  window.addEventListener('resize', () => {
+    if (resizeRAF) cancelAnimationFrame(resizeRAF);
+    resizeRAF = requestAnimationFrame(renderWeeksGrid);
+  });
 
   // —— Quotes (getQuotePool in quotes.js) ———————————————
   function speak(text){
@@ -190,9 +253,17 @@
       window.speechSynthesis.speak(ut);
     }catch(e){}
   }
-  function setQuote(idx){
-    if (!elQuote || !activePool || !activePool.length) return;
-    const q = activePool[idx % activePool.length] || "";
+  function rebuildDeck(cat){
+    const pool = (typeof getQuotePool === 'function') ? getQuotePool(cat) : [];
+    quoteDeck = L.createDeck ? L.createDeck(pool) : { next: (() => { let i = 0; return () => pool[i++ % pool.length]; })(), size: () => pool.length };
+  }
+  function quoteIntervalMs(){
+    return Math.max(10000, (load(KEYS.quoteInterval, 30) * 1000) || 30000);
+  }
+  function showNextQuote(){
+    if (!elQuote || !quoteDeck) return;
+    const q = quoteDeck.next();
+    if (q == null) return;
     elQuote.classList.remove('quote-show');
     elQuote.classList.add('quote-enter');
     setTimeout(() => {
@@ -205,39 +276,47 @@
   function startQuoteRotation(){
     if (load(KEYS.onboarded, false) !== true) return; // wait for onboarding
     if (quoteTimer) clearInterval(quoteTimer);
-    const intervalMs = Math.max(10000, (load(KEYS.quoteInterval, 30) * 1000) || 30000);
-    setQuote(quoteIdx++);
-    quoteTimer = setInterval(() => setQuote(quoteIdx++), intervalMs);
+    showNextQuote();
+    quoteTimer = setInterval(showNextQuote, quoteIntervalMs());
   }
   if (elQuote){
-    elQuote.addEventListener('click', () => {
-      setQuote(quoteIdx++);
-      if (quoteTimer){
-        const intervalMs = Math.max(10000, (load(KEYS.quoteInterval, 30) * 1000) || 30000);
+    const skipQuote = () => {
+      showNextQuote();
+      if (quoteTimer){ // restart the interval so the manual skip feels responsive
         clearInterval(quoteTimer);
-        quoteTimer = setInterval(() => setQuote(quoteIdx++), intervalMs);
+        quoteTimer = setInterval(showNextQuote, quoteIntervalMs());
       }
+    };
+    elQuote.addEventListener('click', skipQuote);
+    elQuote.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); skipQuote(); }
     });
   }
 
-  // —— Loved ones (with optional child mode) ————————————
-  function calcDaysLeft(birthdate, lifespanYears, opts = {}) {
-    // opts: { isChild?: boolean, childMode?: "18"|"full" }
-    const start = new Date(birthdate);
-    let end;
-    if (opts.isChild && opts.childMode === '18') {
-      end = new Date(start);
-      end.setFullYear(end.getFullYear() + 18);
+  // —— Battery/UX: pause work while the tab is hidden ———————
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden){
+      clearInterval(countdownTimer); countdownTimer = null;
+      if (quoteTimer){ clearInterval(quoteTimer); quoteTimer = null; }
+      if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); } catch(e){} }
     } else {
-      end = addYears(start, lifespanYears);
+      updateCountdown();
+      if (!countdownTimer) countdownTimer = setInterval(updateCountdown, 1000);
+      if (!quoteTimer && load(KEYS.onboarded, false) === true && quoteDeck){
+        quoteTimer = setInterval(showNextQuote, quoteIntervalMs());
+      }
     }
-    const now = new Date();
-    const diff = end - now;
-    return Math.max(0, Math.ceil(diff / (1000*60*60*24)));
-  }
+  });
 
+  // —— Loved ones (with optional child mode) ————————————
+  // calcDaysLeft lives in lib.js (L.calcDaysLeft) so it can be unit-tested.
+
+  let loAvatarUrls = [];
   function renderLovedOnes(){
     if (!elLovedList) return;
+    // Release object URLs from the previous render to avoid leaking memory.
+    loAvatarUrls.forEach(URL.revokeObjectURL);
+    loAvatarUrls = [];
     elLovedList.innerHTML = "";
     const timers = new Map();
 
@@ -246,14 +325,16 @@
 
       const img = document.createElement('img');
       img.className = 'lo-avatar';
-      img.alt = '';
+      img.alt = lo.name ? `${lo.name}'s photo` : '';
       if (lo.photoKey && window.ltcIDB) {
-        window.ltcIDB.get(lo.photoKey).then(blob => { if (blob) img.src = URL.createObjectURL(blob); });
+        window.ltcIDB.get(lo.photoKey).then(blob => {
+          if (blob){ const url = URL.createObjectURL(blob); loAvatarUrls.push(url); img.src = url; }
+        });
       }
 
       const meta = document.createElement('div');
       meta.className = 'lo-meta';
-      const daysLeft = calcDaysLeft(
+      const daysLeft = L.calcDaysLeft(
         lo.birthdate,
         load(KEYS.lifespan, 80),
         { isChild: !!lo.isChild, childMode: lo.childMode || null }
@@ -271,7 +352,12 @@
       const edit = document.createElement('button'); edit.textContent = 'Edit';
       edit.addEventListener('click', (evt) => { evt.stopPropagation(); openLovedOneEditor(i); });
       const del  = document.createElement('button'); del.textContent  = 'Remove';
-      del.addEventListener('click', (evt) => { evt.stopPropagation(); lovedOnes.splice(i,1); saveLovedOnes(); });
+      del.addEventListener('click', (evt) => {
+        evt.stopPropagation();
+        const [removed] = lovedOnes.splice(i,1);
+        if (removed && removed.photoKey && window.ltcIDB) window.ltcIDB.del(removed.photoKey).catch(()=>{});
+        saveLovedOnes();
+      });
       actions.append(edit, del);
 
       // Show actions for 5s when name is clicked
@@ -356,6 +442,8 @@
         lovedOnes.push(newObj);
       } else {
         const prev = lovedOnes[idx];
+        // A newly uploaded photo replaces the old blob — delete the stale one.
+        if (photoKey && prev.photoKey && window.ltcIDB) window.ltcIDB.del(prev.photoKey).catch(()=>{});
         lovedOnes[idx] = { ...prev, ...newObj, photoKey: photoKey || prev.photoKey };
       }
       saveLovedOnes();
@@ -397,7 +485,15 @@
 
   if (saveSettings) {
     saveSettings.addEventListener('click', async () => {
-      if (birthInput && birthInput.value) save(KEYS.birthdate, birthInput.value);
+      if (birthInput && birthInput.value){
+        if (L.isFutureDate && L.isFutureDate(birthInput.value)){
+          birthInput.setCustomValidity('Birthdate cannot be in the future.');
+          birthInput.reportValidity();
+          return;
+        }
+        birthInput.setCustomValidity('');
+        save(KEYS.birthdate, birthInput.value);
+      }
       if (lifeInput && lifeInput.value)   save(KEYS.lifespan, Math.max(1, Math.min(130, parseInt(lifeInput.value,10))));
 
       const s = (sloganInput && sloganInput.value || "").trim();
@@ -414,7 +510,7 @@
         (catMot   && catMot.checked)   ? 'motivational' :
         (catTheo  && catTheo.checked)  ? 'theologians' : 'mixed';
       save(KEYS.quoteCategory, cat);
-      activePool = (typeof getQuotePool === 'function') ? getQuotePool(cat) : [];
+      rebuildDeck(cat);
       startQuoteRotation();
 
       const mode = (bgRandom && bgRandom.checked) ? 'random' : (bgSolid && bgSolid.checked) ? 'solid' : 'images';
@@ -424,6 +520,7 @@
 
       elSettings.close();
       updateCountdown();
+      renderWeeksGrid();
       renderLovedOnes();
     });
   }
@@ -432,6 +529,16 @@
   if (bgUpload && window.ltcIDB) {
     bgUpload.addEventListener('change', async (e) => {
       const files = Array.from(e.target.files || []).slice(0,5);
+      if (!files.length) return;
+
+      // Remove previously uploaded backgrounds so old blobs don't pile up.
+      const existing = await window.ltcIDB.keys();
+      await Promise.all(
+        existing
+          .filter(k => typeof k === 'string' && k.startsWith('bg-'))
+          .map(k => window.ltcIDB.del(k))
+      );
+
       const keys = [];
       for (const f of files){
         const key = `bg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -439,6 +546,7 @@
         keys.push(key);
       }
       save(KEYS.bgKeys, keys);
+      if (load(KEYS.bgMode, 'random') === 'images') await setBackground();
     });
   }
 
@@ -452,7 +560,7 @@
       const a = document.createElement('a');
       a.href = url; a.download = 'ltc-settings.json';
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
   }
   if (importInput) {
@@ -481,14 +589,15 @@
       const s = load(KEYS.slogan, "");
       if (elSloganDisp) elSloganDisp.textContent = s || "";
       const cat = load(KEYS.quoteCategory, 'mixed');
-      activePool = (typeof getQuotePool === 'function') ? getQuotePool(cat) : [];
+      rebuildDeck(cat);
       await setBackground();
       renderLovedOnes();
       updateCountdown();
+      setView(load(KEYS.view, 'clock') === 'weeks' ? 'weeks' : 'clock');
       startQuoteRotation();
     } else {
       if (appMain) appMain.hidden = true;
-      if (obDlg && typeof obDlg.showModal === 'function') obDlg.showModal();
+      if (obDlg && typeof obDlg.showModal === 'function' && !obDlg.open) obDlg.showModal();
     }
   }
 
@@ -496,6 +605,13 @@
     obForm.addEventListener('submit', (e) => {
       if (e.submitter && e.submitter.value === 'start'){
         if (!obBirth.value || !obLife.value) { e.preventDefault(); return; }
+        if (L.isFutureDate && L.isFutureDate(obBirth.value)){
+          e.preventDefault();
+          obBirth.setCustomValidity('Birthdate cannot be in the future.');
+          obBirth.reportValidity();
+          return;
+        }
+        obBirth.setCustomValidity('');
         save(KEYS.birthdate, obBirth.value);
         save(KEYS.lifespan, Math.max(1, Math.min(130, parseInt(obLife.value,10))));
         const s = (obSlogan.value || "").trim();
@@ -504,8 +620,21 @@
       }
     });
   }
+  // When onboarding closes, reveal the app if it's complete — otherwise the
+  // user is stuck on a blank screen (after finishing, or if they cancel/ESC).
+  if (obDlg) {
+    obDlg.addEventListener('close', () => { startAppIfReady(); });
+  }
 
   // —— Init ———————————————————————————————————————————————
+  // Cap birthdate pickers at today, and clear custom validity as the user edits.
+  const today = new Date().toISOString().slice(0, 10);
+  [obBirth, birthInput, loBirth].forEach(el => {
+    if (!el) return;
+    el.max = today;
+    el.addEventListener('input', () => el.setCustomValidity(''));
+  });
+
   renderLovedOnes();
   setBackground();
   startAppIfReady();

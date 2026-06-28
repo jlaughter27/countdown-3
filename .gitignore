@@ -1,0 +1,16 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*~
+.idea/
+.vscode/
+
+# Node (only used by tools/ and tests/)
+node_modules/
+npm-debug.log*
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+.cache/

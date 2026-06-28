@@ -4,11 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Live Transformed Countdown</title>
+  <meta name="description" content="A memento mori countdown: a gentle, constant reminder that each moment is precious. Counts down your remaining lifespan with rotating quotes — works fully offline.">
 
   <!-- PWA meta -->
   <meta name="theme-color" content="#111111">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="manifest" href="manifest.json">
 
@@ -30,21 +33,37 @@
   <!-- Main app UI (hidden until onboarding completes) -->
   <main id="app-main">
     <section class="center-stack" id="center">
-      <div id="countdown" class="countdown">
-        <!-- Line 1: Days -->
-        <div id="cd-days" class="time-part">—</div>
-
-        <!-- Line 2: HH:MM:SS (24-hour) -->
-        <div id="cd-time" class="time-part" aria-label="Time remaining today">
-          <span id="cd-hh">00</span>:<span id="cd-mm">00</span>:<span id="cd-ss">00</span>
-        </div>
+      <div class="view-toggle" role="tablist" aria-label="Countdown view">
+        <button type="button" id="view-clock" class="active" role="tab" aria-selected="true">Clock</button>
+        <button type="button" id="view-weeks" role="tab" aria-selected="false">Weeks</button>
       </div>
 
-      <!-- Quote (tap/click to skip to next) -->
-      <blockquote id="quote" aria-live="polite" title="Tap to skip">&#8220;Quote will appear here.&#8221;</blockquote>
+      <div id="clock-view">
+        <div id="countdown" class="countdown">
+          <!-- Line 1: Days -->
+          <div id="cd-days" class="time-part">—</div>
 
-      <!-- Percentage lived -->
-      <p id="percentage-lived"> </p>
+          <!-- Line 2: HH:MM:SS remaining (hours, minutes, seconds) -->
+          <div id="cd-time" class="time-part" aria-label="Hours, minutes and seconds remaining">
+            <span id="cd-hh">00</span>:<span id="cd-mm">00</span>:<span id="cd-ss">00</span>
+          </div>
+        </div>
+
+        <!-- Percentage lived -->
+        <p id="percentage-lived"> </p>
+
+        <!-- Human-scale framing (e.g., "≈ 2,184 Saturdays left") -->
+        <p id="human-units" class="human-units"></p>
+      </div>
+
+      <!-- Your life in weeks (one cell per week) -->
+      <section id="weeks-view" class="weeks-view" hidden aria-label="Your life in weeks">
+        <canvas id="weeks-grid" role="img" aria-label="Life in weeks"></canvas>
+        <p id="weeks-caption" class="weeks-caption"></p>
+      </section>
+
+      <!-- Quote (tap/click or press Enter to skip to next) — shown in both views -->
+      <blockquote id="quote" aria-live="polite" role="button" tabindex="0" title="Tap or press Enter to skip">&#8220;Quote will appear here.&#8221;</blockquote>
     </section>
 
     <!-- Loved Ones (bottom-left) -->
@@ -60,9 +79,9 @@
   </main>
 
   <!-- Onboarding (first run) -->
-  <dialog id="onboarding">
+  <dialog id="onboarding" aria-labelledby="onboarding-title">
     <form method="dialog" id="onboarding-form">
-      <h2>Before we begin</h2>
+      <h2 id="onboarding-title">Before we begin</h2>
       <p>
         Life is short. We’re here for a moment — a vapor — and then we’re gone.
         <br><br>
@@ -90,9 +109,9 @@
   </dialog>
 
   <!-- Settings Modal -->
-  <dialog id="settings-dialog">
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
     <form method="dialog" id="settings-form">
-      <h2>Settings</h2>
+      <h2 id="settings-title">Settings</h2>
 
       <label> Your Birthdate
         <input type="date" id="user-birthdate">
@@ -146,7 +165,7 @@
   </dialog>
 
   <!-- Loved One Editor Modal -->
-  <dialog id="loved-one-dialog">
+  <dialog id="loved-one-dialog" aria-labelledby="loved-one-title">
     <form method="dialog" id="loved-one-form" novalidate>
       <h3 id="loved-one-title">Add Loved One</h3>
       <input type="hidden" id="loved-one-index">
@@ -186,6 +205,7 @@
   </dialog>
 
   <!-- Scripts -->
+  <script src="lib.js"></script>
   <script src="quotes.js"></script>
   <script src="idb.min.js"></script>
   <script src="app.js" defer></script>
