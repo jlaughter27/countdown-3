@@ -108,5 +108,19 @@
     return !!d && d.getTime() > now.getTime();
   }
 
-  return { DAY_MS, parseLocalDate, addYears, clamp, computeCountdown, calcDaysLeft, shuffle, createDeck, isFutureDate };
+  // Break a life into whole weeks — the unit behind the "Life in Weeks" grid
+  // and the human-scale framing. 52 columns/year is the conventional layout.
+  function lifeUnits(birth, lifespanYears, now = new Date()) {
+    const start = parseLocalDate(birth);
+    const span = Number(lifespanYears);
+    if (!start || !span || span <= 0) return null;
+    const end = addYears(start, span);
+    const weekMs = 7 * DAY_MS;
+    const weeksTotal = Math.max(1, Math.round((end - start) / weekMs));
+    const weeksLived = Math.round(clamp(Math.floor((now - start) / weekMs), 0, weeksTotal));
+    const weeksLeft = Math.max(0, weeksTotal - weeksLived);
+    return { weeksTotal, weeksLived, weeksLeft, columns: 52 };
+  }
+
+  return { DAY_MS, parseLocalDate, addYears, clamp, computeCountdown, calcDaysLeft, shuffle, createDeck, isFutureDate, lifeUnits };
 });

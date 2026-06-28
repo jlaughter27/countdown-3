@@ -117,6 +117,23 @@ test('isFutureDate', () => {
   ok(lib.isFutureDate('2010-01-01', now) === false, 'past');
 });
 
+// —— lifeUnits ——
+test('lifeUnits splits a life into weeks', () => {
+  const u = lib.lifeUnits('2000-01-01', 80, new Date(2020, 0, 1));
+  eq(u.columns, 52, 'columns');
+  // 80 years is ~4174 weeks; allow a little slack for rounding.
+  ok(Math.abs(u.weeksTotal - Math.round(80 * 365.25 / 7)) <= 1, 'weeksTotal ~ 80yr');
+  eq(u.weeksLived + u.weeksLeft, u.weeksTotal, 'lived + left = total');
+  ok(u.weeksLived > 1000 && u.weeksLived < 1100, 'about 20 years lived (~1043 weeks)');
+});
+test('lifeUnits clamps and guards', () => {
+  ok(lib.lifeUnits(null, 80) === null, 'no birth');
+  ok(lib.lifeUnits('2000-01-01', 0) === null, 'zero lifespan');
+  const past = lib.lifeUnits('1900-01-01', 50, new Date(2020, 0, 1));
+  eq(past.weeksLived, past.weeksTotal, 'fully lived');
+  eq(past.weeksLeft, 0, 'none left');
+});
+
 // —— quotes ——
 test('getQuotePool returns the right pools', () => {
   ok(quotes.getQuotePool('bible').length === quotes.bible.length, 'bible');

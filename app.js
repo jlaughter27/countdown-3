@@ -13,6 +13,7 @@
     bgMode: 'ltc.bgMode',
     bgColor: 'ltc.bgColor',
     bgKeys: 'ltc.bgKeys',
+    view: 'ltc.view',
     onboarded: 'ltc.onboarded'
   };
 
@@ -22,6 +23,13 @@
   const elMM         = document.getElementById('cd-mm');
   const elSS         = document.getElementById('cd-ss');
   const elPercent    = document.getElementById('percentage-lived');
+  const elHumanUnits = document.getElementById('human-units');
+  const elClockView  = document.getElementById('clock-view');
+  const elWeeksView  = document.getElementById('weeks-view');
+  const elWeeksGrid  = document.getElementById('weeks-grid');
+  const elWeeksCap   = document.getElementById('weeks-caption');
+  const viewClockBtn = document.getElementById('view-clock');
+  const viewWeeksBtn = document.getElementById('view-weeks');
   const elQuote      = document.getElementById('quote');
   const elLocalTime  = document.getElementById('local-time');
   const elSloganDisp = document.getElementById('slogan-display');
@@ -147,6 +155,7 @@
       elMM.textContent = '00';
       elSS.textContent = '00';
       elPercent.textContent = '';
+      if (elHumanUnits) elHumanUnits.textContent = '';
       return;
     }
 
@@ -164,9 +173,74 @@
     last = { days, hh, mm, ss };
 
     elPercent.textContent = ended ? '100% lived — every day is a gift' : `${pct.toFixed(1)}% lived`;
+
+    if (elHumanUnits){
+      const u = L.lifeUnits && L.lifeUnits(load(KEYS.birthdate, null), load(KEYS.lifespan, null));
+      elHumanUnits.textContent = u
+        ? (u.weeksLeft > 0 ? `≈ ${u.weeksLeft.toLocaleString()} Saturdays left` : 'Make today count')
+        : '';
+    }
   }
   let countdownTimer = setInterval(updateCountdown, 1000);
   updateCountdown();
+
+  // —— Life in weeks ————————————————————————————————————
+  const accentColor = (getComputedStyle(document.documentElement)
+    .getPropertyValue('--accent') || '#7FFF7F').trim() || '#7FFF7F';
+
+  function renderWeeksGrid(){
+    if (!elWeeksGrid || elWeeksView.hidden) return;
+    const u = L.lifeUnits && L.lifeUnits(load(KEYS.birthdate, null), load(KEYS.lifespan, null));
+    const ctx = elWeeksGrid.getContext('2d');
+    if (!u || !ctx){ if (elWeeksCap) elWeeksCap.textContent = ''; return; }
+
+    const cols = u.columns;
+    const rows = Math.ceil(u.weeksTotal / cols);
+    const cssW = elWeeksGrid.clientWidth || (elWeeksView.clientWidth || 320);
+    const unit = cssW / cols;            // one cell + its gap
+    const cell = Math.max(2, unit * 0.78);
+    const cssH = rows * unit;
+    const dpr = window.devicePixelRatio || 1;
+
+    elWeeksGrid.width = Math.round(cssW * dpr);
+    elWeeksGrid.height = Math.round(cssH * dpr);
+    elWeeksGrid.style.height = cssH + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    for (let i = 0; i < u.weeksTotal; i++){
+      const x = (i % cols) * unit;
+      const y = Math.floor(i / cols) * unit;
+      if (i < u.weeksLived)      ctx.fillStyle = 'rgba(255,255,255,0.82)'; // lived
+      else if (i === u.weeksLived) ctx.fillStyle = accentColor;            // this week
+      else                       ctx.fillStyle = 'rgba(255,255,255,0.12)'; // ahead
+      ctx.fillRect(x, y, cell, cell);
+    }
+
+    const lived = u.weeksLived.toLocaleString();
+    const total = u.weeksTotal.toLocaleString();
+    elWeeksGrid.setAttribute('aria-label', `Life in weeks: ${lived} of ${total} weeks lived`);
+    if (elWeeksCap) elWeeksCap.textContent = `${lived} weeks lived · ${u.weeksLeft.toLocaleString()} remaining`;
+  }
+
+  function setView(view){
+    const weeks = view === 'weeks';
+    if (elClockView) elClockView.hidden = weeks;
+    if (elWeeksView) elWeeksView.hidden = !weeks;
+    if (viewClockBtn){ viewClockBtn.classList.toggle('active', !weeks); viewClockBtn.setAttribute('aria-selected', String(!weeks)); }
+    if (viewWeeksBtn){ viewWeeksBtn.classList.toggle('active', weeks);  viewWeeksBtn.setAttribute('aria-selected', String(weeks)); }
+    save(KEYS.view, view);
+    if (weeks) renderWeeksGrid();
+  }
+  if (viewClockBtn) viewClockBtn.addEventListener('click', () => setView('clock'));
+  if (viewWeeksBtn) viewWeeksBtn.addEventListener('click', () => setView('weeks'));
+
+  // Redraw the grid (only when visible) on resize, coalesced to a frame.
+  let resizeRAF = null;
+  window.addEventListener('resize', () => {
+    if (resizeRAF) cancelAnimationFrame(resizeRAF);
+    resizeRAF = requestAnimationFrame(renderWeeksGrid);
+  });
 
   // —— Quotes (getQuotePool in quotes.js) ———————————————
   function speak(text){
@@ -446,6 +520,7 @@
 
       elSettings.close();
       updateCountdown();
+      renderWeeksGrid();
       renderLovedOnes();
     });
   }
@@ -518,6 +593,7 @@
       await setBackground();
       renderLovedOnes();
       updateCountdown();
+      setView(load(KEYS.view, 'clock') === 'weeks' ? 'weeks' : 'clock');
       startQuoteRotation();
     } else {
       if (appMain) appMain.hidden = true;

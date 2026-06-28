@@ -9,8 +9,12 @@ can track the time remaining for the people you love.
 
 ## Features
 
-- **Lifetime countdown** — days remaining plus a live `HH:MM:SS` clock, and a
-  "percentage lived" readout.
+- **Lifetime countdown** — days remaining plus a live `HH:MM:SS` clock, a
+  "percentage lived" readout, and a human-scale framing (e.g. *"≈ 2,184
+  Saturdays left"*) to make "numbering your days" tangible.
+- **Life in Weeks** — toggle to the classic memento mori grid: one cell per
+  week of your life, filled for weeks lived, with the current week highlighted
+  and the rest still ahead of you.
 - **Rotating quotes** — Bible, Motivational, Theologians, or a shuffled Mix.
   Tap a quote to skip ahead. Optional text-to-speech.
 - **Loved ones** — track up to five people, with photos and a special

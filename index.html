@@ -33,21 +33,37 @@
   <!-- Main app UI (hidden until onboarding completes) -->
   <main id="app-main">
     <section class="center-stack" id="center">
-      <div id="countdown" class="countdown">
-        <!-- Line 1: Days -->
-        <div id="cd-days" class="time-part">—</div>
-
-        <!-- Line 2: HH:MM:SS remaining (hours, minutes, seconds) -->
-        <div id="cd-time" class="time-part" aria-label="Hours, minutes and seconds remaining">
-          <span id="cd-hh">00</span>:<span id="cd-mm">00</span>:<span id="cd-ss">00</span>
-        </div>
+      <div class="view-toggle" role="tablist" aria-label="Countdown view">
+        <button type="button" id="view-clock" class="active" role="tab" aria-selected="true">Clock</button>
+        <button type="button" id="view-weeks" role="tab" aria-selected="false">Weeks</button>
       </div>
 
-      <!-- Quote (tap/click or press Enter to skip to next) -->
-      <blockquote id="quote" aria-live="polite" role="button" tabindex="0" title="Tap or press Enter to skip">&#8220;Quote will appear here.&#8221;</blockquote>
+      <div id="clock-view">
+        <div id="countdown" class="countdown">
+          <!-- Line 1: Days -->
+          <div id="cd-days" class="time-part">—</div>
 
-      <!-- Percentage lived -->
-      <p id="percentage-lived"> </p>
+          <!-- Line 2: HH:MM:SS remaining (hours, minutes, seconds) -->
+          <div id="cd-time" class="time-part" aria-label="Hours, minutes and seconds remaining">
+            <span id="cd-hh">00</span>:<span id="cd-mm">00</span>:<span id="cd-ss">00</span>
+          </div>
+        </div>
+
+        <!-- Percentage lived -->
+        <p id="percentage-lived"> </p>
+
+        <!-- Human-scale framing (e.g., "≈ 2,184 Saturdays left") -->
+        <p id="human-units" class="human-units"></p>
+      </div>
+
+      <!-- Your life in weeks (one cell per week) -->
+      <section id="weeks-view" class="weeks-view" hidden aria-label="Your life in weeks">
+        <canvas id="weeks-grid" role="img" aria-label="Life in weeks"></canvas>
+        <p id="weeks-caption" class="weeks-caption"></p>
+      </section>
+
+      <!-- Quote (tap/click or press Enter to skip to next) — shown in both views -->
+      <blockquote id="quote" aria-live="polite" role="button" tabindex="0" title="Tap or press Enter to skip">&#8220;Quote will appear here.&#8221;</blockquote>
     </section>
 
     <!-- Loved Ones (bottom-left) -->

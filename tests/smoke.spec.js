@@ -37,6 +37,22 @@ test('first-run flow: onboarding → countdown, quotes, settings, loved ones', a
   await expect.poll(async () => page.locator('#cd-ss').textContent(), { timeout: 4000 })
     .not.toBe(firstSeconds);
 
+  // Human-scale framing is present.
+  await expect(page.locator('#human-units')).toContainText('Saturdays left');
+
+  // Life-in-Weeks view toggles on and renders a caption + a sized canvas.
+  await page.click('#view-weeks');
+  await expect(page.locator('#weeks-view')).toBeVisible();
+  await expect(page.locator('#clock-view')).toBeHidden();
+  await expect(page.locator('#weeks-caption')).toContainText('weeks lived');
+  const canvasBox = await page.locator('#weeks-grid').boundingBox();
+  expect(canvasBox.width).toBeGreaterThan(0);
+  expect(canvasBox.height).toBeGreaterThan(0);
+  // Toggle back to the clock.
+  await page.click('#view-clock');
+  await expect(page.locator('#clock-view')).toBeVisible();
+  await expect(page.locator('#weeks-view')).toBeHidden();
+
   // 4) A real quote replaces the placeholder.
   await expect(page.locator('#quote')).not.toContainText('Quote will appear here', { timeout: 5000 });
   await expect(page.locator('#quote')).toHaveAttribute('role', 'button');
