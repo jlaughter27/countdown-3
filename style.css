@@ -9,6 +9,10 @@
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
 
+/* The `hidden` attribute must win over author display rules (e.g. main{display:grid},
+   .weeks-view{display:flex}) — author styles otherwise override the UA [hidden] rule. */
+[hidden]{ display:none !important; }
+
 body{
   margin:0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
